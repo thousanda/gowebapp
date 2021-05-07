@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"regexp"
 )
 
@@ -15,12 +16,12 @@ type Page struct {
 }
 
 func (p *Page) save() error {
-	filename := p.Title + ".txt"
+	filename := fmt.Sprintf("contents/%s.txt", p.Title)
 	return ioutil.WriteFile(filename, p.Body, 0600)
 }
 
 func loadPage(title string) (*Page, error) {
-	filename := "contents/" + title + ".txt"
+	filename := fmt.Sprintf("contents/%s.txt", title)
 	body, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return nil, err
@@ -72,7 +73,6 @@ var validPath = regexp.MustCompile("^/(edit|save|view)/([a-zA-Z0-9]+)$")
 func makeHandler(fn func(http.ResponseWriter, *http.Request, string)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		m := validPath.FindStringSubmatch(r.URL.Path)
-		fmt.Println(m)
 		if m == nil {
 			http.NotFound(w, r)
 			return
@@ -82,6 +82,10 @@ func makeHandler(fn func(http.ResponseWriter, *http.Request, string)) http.Handl
 }
 
 func main() {
+	if err := os.MkdirAll("contents", 0755); err != nil {
+		fmt.Println(err)
+		return
+	}
 	http.HandleFunc("/view/", makeHandler(viewHandler))
 	http.HandleFunc("/edit/", makeHandler(editHandler))
 	http.HandleFunc("/save/", makeHandler(saveHandler))
